@@ -43,26 +43,27 @@ public class FTPServer {
 
 			while (true) {
 				String command = scanner.next().toUpperCase();
-				System.out.println(command);
+
 				switch (command) {
 					case "USER":
-						System.out.println(command);
+						//System.out.println(command);
 						handleUserCommand(scanner, outputStream);
 						break;
 					case "PASS":
-						System.out.println(command);
+						//System.out.println(command);
 						handlePassCommand(scanner, outputStream);
 						break;
 					case "RETR":
-						System.out.println(command);
+						//System.out.println(command);
 						handleRetrCommand(scanner, outputStream, clientSocket);
 						break;
 					case "QUIT":
-						System.out.println(command);
+						//System.out.println(command);
 						handleQuitCommand(outputStream, clientSocket);
 						return;
 
 					default:
+						//System.out.println(command);
 						sendResponse(outputStream, "500 Syntax error, command not recognized.\r\n");
 				}
 			}
