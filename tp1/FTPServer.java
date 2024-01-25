@@ -1,3 +1,4 @@
+package tp1;
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
@@ -38,7 +39,7 @@ public class FTPServer {
 
             while (true) {
                 String command = scanner.next().toUpperCase();
-
+                System.err.println(command);
                 switch (command) {
                     case "USER":
                         handleUserCommand(scanner, outputStream);
@@ -47,6 +48,7 @@ public class FTPServer {
                         handlePassCommand(scanner, outputStream);
                         break;
                     case "RETR":
+                    System.err.println("get");
                         handleRetrCommand(scanner, outputStream, dataSocket);
                         break;
                     case "QUIT":
@@ -55,13 +57,37 @@ public class FTPServer {
                     case "PASV":
                         dataSocket = handlePasvCommand(clientSocket, outputStream);
                         break;
+                    case "EPSV":
+                  
+                        break;
+                    case "CD":
+						handleDirCommand(clientSocket);
+						break;
                     default:
                         sendResponse(outputStream, "500 Syntax error, command not recognized.\r\n");
                 }
             }
         }
     }
-
+        
+	private static void handleDirCommand(Socket socket) throws IOException {
+		// Retrieve a list of files in the current directory
+		File folder = new File(".");
+		File[] listOfFiles = folder.listFiles();
+		String filesList = "";
+		for (int i = 0; i < listOfFiles.length; i++) {
+			if (listOfFiles[i].isFile()) {
+				filesList += listOfFiles[i].getName() + " [FILE], ";
+			} else if (listOfFiles[i].isDirectory()) {
+				filesList += listOfFiles[i].getName() + " [DIR], ";
+			}
+		}
+		sendCommand(filesList, socket);
+	}
+    private static void sendCommand(String command, Socket socket) throws IOException {
+		PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+		out.println(command);
+	}
     private static DataSocket handlePasvCommand(Socket clientSocket, OutputStream outputStream) throws IOException {
         ServerSocket dataServerSocket = new ServerSocket(0); // Let the system choose an available port
         int port = dataServerSocket.getLocalPort();
@@ -77,7 +103,8 @@ public class FTPServer {
 
         return new DataSocket(dataSocket);
     }
-
+    
+ 
     private static void handleUserCommand(Scanner scanner, OutputStream outputStream) throws IOException {
         String username = scanner.next();
         if (testConnectionUserName(username)) {
@@ -88,6 +115,7 @@ public class FTPServer {
         }
     }
 
+    
     private static void handlePassCommand(Scanner scanner, OutputStream outputStream) throws IOException {
         String password = scanner.next();
         if (testConnectionUserPass(password)) {
@@ -150,29 +178,16 @@ public class FTPServer {
                 }
 
                 sendResponse(outputStream, "226 Transfer complete\r\n");
+                dataSocket.close();
             } catch (IOException e) {
                 sendResponse(outputStream, "552 Requested file action aborted\r\n");
             }
         } catch (IOException e) {
             sendResponse(outputStream, "552 Requested file action aborted\r\n");
         } finally {
-            dataSocket.close();
+           
         }
     }
 
-    private static class DataSocket {
-        private final Socket socket;
-
-        public DataSocket(Socket socket) {
-            this.socket = socket;
-        }
-
-        public OutputStream getOutputStream() throws IOException {
-            return socket.getOutputStream();
-        }
-
-        public void close() throws IOException {
-            socket.close();
-        }
-    }
+ 
 }
