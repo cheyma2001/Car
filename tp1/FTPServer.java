@@ -58,18 +58,65 @@ public class FTPServer {
                         dataSocket = handlePasvCommand(clientSocket, outputStream);
                         break;
                     case "EPSV":
-                  
+                        handlerEPSVCommand(outputStream);
+                        break;
+                    case "LPSV":
+                        handlerLPSVCommand(outputStream);
                         break;
                     case "CD":
 						handleDirCommand(clientSocket);
 						break;
+                    // case "LIST":
+                    //     System.err.println("list");
+
+                    //     handleListCommand(outputStream,clientSocket);
+					// 	break;
                     default:
                         sendResponse(outputStream, "500 Syntax error, command not recognized.\r\n");
                 }
             }
         }
     }
-        
+
+
+
+    
+    
+    
+
+
+    private static void handleListCommand(OutputStream outputStream, Socket clientSocket) throws IOException {
+        if (clientSocket == null) {
+            sendResponse(outputStream, "425 Use PASV first.\r\n");
+            return;
+        }
+    
+        File directoryCurrent = new File(".");
+        File[] files = directoryCurrent.listFiles();
+    
+        if (files == null) {
+            sendResponse(outputStream, "550 Directory not found\r\n");
+            return;
+        } else {
+            sendResponse(outputStream, "150 Here comes the directory listing\r\n");
+    
+            try (OutputStream dataOutputStream = clientSocket.getOutputStream()) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        dataOutputStream.write(("D " + file.getName() + "\r\n").getBytes());
+                    } else if (file.isFile()) {
+                        dataOutputStream.write(("F " + file.getName() + "\r\n").getBytes());
+                    }
+                }
+    
+                sendResponse(outputStream, "226 Directory send OK.\r\n");
+            } catch (IOException e) {
+                sendResponse(outputStream, "552 Requested file action aborted\r\n");
+            }
+        }
+    }
+    
+ 
 	private static void handleDirCommand(Socket socket) throws IOException {
 		// Retrieve a list of files in the current directory
 		File folder = new File(".");
@@ -102,6 +149,26 @@ public class FTPServer {
         dataServerSocket.close();
 
         return new DataSocket(dataSocket);
+    }
+
+    public static void handlerEPSVCommand(OutputStream outputStream) {
+        try (ServerSocket dataServerSocket = new ServerSocket(0)) {
+            int port = dataServerSocket.getLocalPort();
+            String mes = "228 Entering Extended Passive Mode (|||" + port + "|)\r\n";
+            outputStream.write(mes.getBytes());
+        } catch (IOException e) {
+            System.err.println("Error : " + e);
+        }
+    }
+    
+    public static void handlerLPSVCommand(OutputStream outputStream) {
+        try (ServerSocket dataServerSocket = new ServerSocket(0)) {
+            int port = dataServerSocket.getLocalPort();
+            String mes = "228 Entering Local Passive Mode (" + port + ")\r\n";
+            outputStream.write(mes.getBytes());
+        } catch (IOException e) {
+            System.err.println("Error : " + e);
+        }
     }
     
  
