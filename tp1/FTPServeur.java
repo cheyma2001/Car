@@ -1,19 +1,22 @@
 package tp1;
 
-
 import java.io.*;
 import java.net.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 
+/**
+ * Classe représentant un serveur FTP basique.
+ */
 public class FTPServeur {
 
     private static ServerSocket serverSocket, dataServer;
     private static Socket clientSocket, dataClientSocket;
     private static String currentDirectory = "/home/passwd/devoir/Car";
-    
-private static final Map<String, String> userCredentials = new HashMap<>();
+
+    // Détient les informations d'identification des utilisateurs autorisés.
+    private static final Map<String, String> userCredentials = new HashMap<>();
 
     static {
         // Ajoutez les utilisateurs et mots de passe autorisés ici
@@ -21,6 +24,11 @@ private static final Map<String, String> userCredentials = new HashMap<>();
         userCredentials.put("user2", "pass2");
     }
 
+    /**
+     * Point d'entrée principal du serveur FTP.
+     * 
+     * @param args Les arguments de la ligne de commande.
+     */
     public static void main(String[] args) {
         try {
             serverSocket = new ServerSocket(2121);
@@ -47,13 +55,17 @@ private static final Map<String, String> userCredentials = new HashMap<>();
         }
     }
 
+    /**
+     * Traite la connexion avec un client.
+     * 
+     * @param clientSocket La socket du client.
+     */
     private static void processClientConnection(Socket clientSocket) {
         try {
             OutputStream outputStream = clientSocket.getOutputStream();
             InputStream inputStream = clientSocket.getInputStream();
             Scanner scanner = new Scanner(inputStream);
             sendResponse(outputStream, "220 Service ready \r\n");
-           
 
             while (true) {
                 String cm = scanner.nextLine();
@@ -73,9 +85,10 @@ private static final Map<String, String> userCredentials = new HashMap<>();
                     handleCwdCommand(commandArray, outputStream);
                 } else if (cm.toUpperCase().equals("QUIT")) {
                     outputStream.write("221 User logged out\r\n".getBytes());
-                    if (clientSocket != null) clientSocket.close();
+                    if (clientSocket != null)
+                        clientSocket.close();
                 } else {
-                    sendResponse(outputStream,"502 Command not implemented\r\n");
+                    sendResponse(outputStream, "502 Command not implemented\r\n");
                 }
             }
         } catch (IOException e) {
@@ -84,7 +97,18 @@ private static final Map<String, String> userCredentials = new HashMap<>();
         }
     }
 
-    private static void handleUserAuthentication(String[] commandTb, OutputStream out, Scanner scanner) throws IOException {
+    // Méthodes pour les différentes commandes FTP...
+
+    /**
+     * Gère l'authentification de l'utilisateur.
+     * 
+     * @param commandTb Le tableau de commandes.
+     * @param out       La sortie de la socket.
+     * @param scanner   Le scanner pour lire les commandes.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
+    private static void handleUserAuthentication(String[] commandTb, OutputStream out, Scanner scanner)
+            throws IOException {
         String username = commandTb[1];
         if (userCredentials.containsKey(username)) {
             out.write("331 User name okay, need password\r\n".getBytes());
@@ -100,40 +124,52 @@ private static final Map<String, String> userCredentials = new HashMap<>();
         }
     }
 
+    /**
+     * Gère la commande EPSV.
+     * 
+     * @param outputStream La sortie de la socket.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
     private static void handleEpsvCommand(OutputStream outputStream) throws IOException {
-        dataServer = new ServerSocket(0); 
+        dataServer = new ServerSocket(0);
         int hostPort = dataServer.getLocalPort();
         outputStream.write(("229 Entering Extended Passive Mode (|||" + hostPort + "|)\r\n").getBytes());
     }
 
-  
+    /**
+     * Gère la commande RETR.
+     * 
+     * @param commandTb    Le tableau de commandes.
+     * @param outputStream La sortie de la socket.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
     private static void handleRetrCommand(String[] commandTb, OutputStream outputStream) throws IOException {
         if (commandTb.length < 2) {
             sendResponse(outputStream, "501 Missing argument for RETR command\r\n");
             return;
         }
-    
+
         String fileName = commandTb[1];
         File file = new File(currentDirectory, fileName); // Concaténer le chemin du répertoire courant
-    
+
         if (!file.exists()) {
             sendResponse(outputStream, "550 File not found\r\n");
             return;
         }
-    
+
         sendResponse(outputStream, "150 Opening BINARY mode data connection for file transfer\r\n");
-    
+
         try (Socket dataClientSocket = dataServer.accept();
-             FileInputStream fis = new FileInputStream(file);
-             OutputStream dataOut = dataClientSocket.getOutputStream()) {
-    
+                FileInputStream fis = new FileInputStream(file);
+                OutputStream dataOut = dataClientSocket.getOutputStream()) {
+
             byte[] buffer = new byte[4096];
             int count;
             while ((count = fis.read(buffer)) > 0) {
                 dataOut.write(buffer, 0, count);
             }
             sendResponse(outputStream, "226 Transfered with success\r\n");
-    
+
         } finally {
             if (dataClientSocket != null && !dataClientSocket.isClosed()) {
                 dataClientSocket.close();
@@ -143,38 +179,50 @@ private static final Map<String, String> userCredentials = new HashMap<>();
             }
         }
     }
-   
 
+    /**
+     * Gère la commande CWD.
+     * 
+     * @param commandTb Le tableau de commandes.
+     * @param output    La sortie de la socket.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
     private static void handleCwdCommand(String[] commandTb, OutputStream output) throws IOException {
         if (commandTb.length < 2) {
             sendResponse(output, "501 Missing argument for CWD command\r\n");
-         
+
             return;
         }
-    
+
         String targetDirectory = commandTb[1];
         File newDir = new File(currentDirectory, targetDirectory);
-    
+
         if (newDir.isDirectory() && newDir.exists()) {
             currentDirectory = newDir.getAbsolutePath();
-            sendResponse(output,"250 CWD command successful. Working directory is "+ currentDirectory + "\r\n");
-          
+            sendResponse(output, "250 CWD command successful. Working directory is " + currentDirectory + "\r\n");
+
         } else {
-            sendResponse(output,"550 Failed to change directory\r\n");
-          
+            sendResponse(output, "550 Failed to change directory\r\n");
+
         }
     }
+
+    /**
+     * Gère la commande LIST.
+     * 
+     * @param outputStream La sortie de la socket.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
     private static void handleListCommand(OutputStream outputStream) throws IOException {
         try (Socket dataClientSocket = dataServer.accept();
-             OutputStream dataOut = dataClientSocket.getOutputStream()) {
-    
+                OutputStream dataOut = dataClientSocket.getOutputStream()) {
+
             File directoryCurrent = new File(currentDirectory);
             File[] files = directoryCurrent.listFiles();
-    
+
             if (files != null) {
                 sendResponse(outputStream, "150 Displaying the directory contents\r\n");
-               
-    
+
                 for (File file : files) {
                     String permissions = getPermissions(file);
                     if (file.isDirectory()) {
@@ -187,10 +235,16 @@ private static final Map<String, String> userCredentials = new HashMap<>();
             } else {
                 outputStream.write("550 Directory not found\r\n".getBytes());
             }
-    
+
         }
     }
-    
+
+    /**
+     * Renvoie une représentation des permissions d'un fichier.
+     * 
+     * @param file Le fichier dont les permissions sont nécessaires.
+     * @return Une chaîne représentant les permissions du fichier.
+     */
     private static String getPermissions(File file) {
         StringBuilder permissions = new StringBuilder();
         if (file.isDirectory()) {
@@ -198,29 +252,33 @@ private static final Map<String, String> userCredentials = new HashMap<>();
         } else {
             permissions.append("-");
         }
-    
+
         if (file.canRead()) {
             permissions.append("r");
         } else {
             permissions.append("-");
         }
-    
+
         if (file.canWrite()) {
             permissions.append("w");
         } else {
             permissions.append("-");
         }
-    
+
         // Add more conditions for other permissions (execute, etc.) if needed.
-    
+
         return permissions.toString();
     }
 
-
+    /**
+     * Envoie une réponse au client.
+     * 
+     * @param outputStream La sortie de la socket.
+     * @param response     La réponse à envoyer.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
     private static void sendResponse(OutputStream outputStream, String response) throws IOException {
         outputStream.write(response.getBytes());
     }
-
-    
 
 }

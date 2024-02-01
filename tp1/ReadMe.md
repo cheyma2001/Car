@@ -1,65 +1,113 @@
-# Serveur FTP
+# Serveur FTP Java
 
-Il s'agit d'une implémentation simple d'un serveur FTP (File Transfer Protocol) en Java. Le serveur permet aux utilisateurs de se connecter, de s'authentifier et de récupérer des fichiers en utilisant le protocole FTP.
+Ceci est une implémentation simple d'un serveur FTP en Java qui prend en charge diverses commandes FTP de base.
 
-## Démarrage
+## Prérequis
 
-### Prérequis
+- WSL si vous utiliser Windows.
 
-- Java Development Kit (JDK) installé sur votre machine
-- Compréhension de base des commandes FTP
+## Comment exécuter
 
-### Exécution du Serveur
+1. **Compiler le code :**
 
-Clonez ce dépôt :
+    ```bash
+    javac tp1/FTPServeur.java
+    ```
 
-```bash
-git clone <https://github.com/cheyma2001/Car/>
+2. **Exécuter le serveur :**
+
+    ```bash
+    java tp1.FTPServeur
+    ```
+
+3. **Connexion au serveur :**
+
+   Utilisez un client FTP pour vous connecter au serveur.
+   * exemple : Se connecter avec un nouveau prompt :
+   ```bash
+   $ ftp localhost 2121
+    Trying [::1]:2121 ...
+    Connected to localhost.
+    220 Service ready 
+    Name (localhost:passwd): user1
+    331 User name okay, need password
+    Password: 
+    230 User logged in
+   ```
+
+
+## Commandes FTP prises en charge
+
+- **USER username**
+    - Exemple : `USER user1`
+    - Authentifie l'utilisateur avec le nom d'utilisateur fourni.
+
+- **PASS password**
+    - Exemple : `PASS pass1`
+    - Fournit le mot de passe pour l'authentification.
+
+- **EPSV**
+    - Exemple : `EPSV` 
+    - Entre en mode passif étendu.
+
+- **RETR filename**
+    - Exemple : `RETR example.txt`
+    - Récupère le fichier spécifié depuis le serveur.
+
+- **LIST**
+    - Exemple : `LIST`
+    - Liste les fichiers dans le répertoire actuel.
+
+- **CWD directory**
+    - Exemple : `CWD /chemin/vers/repertoire`
+    - Change le répertoire de travail vers celui spécifié.
+
+- **QUIT**
+    - Exemple : `QUIT`
+    - Se déconnecte et ferme la connexion.
+
+## Informations d'identification de l'utilisateur
+
+Les informations d'identification de l'utilisateur sont prédéfinies dans la map `userCredentials` dans le code. Modifiez cette map pour ajouter ou supprimer des utilisateurs.
+
+```java
+private static final Map<String, String> userCredentials = new HashMap<>();
+
+static {
+    // Ajoutez les utilisateurs et mots de passe ici
+    userCredentials.put("user1", "pass1");
+    userCredentials.put("user2", "pass2");
+}
 ```
-Compilez le code du serveur :
-```bash
-javac FTPServer.java
-```
-Executez avec :
-```bash
-java FTPServer.java
-```
-Le serveur démarrera et écoutera sur le port 2020.
+## Extension du Programme pour Ajouter des Commandes FTP
 
-### Connexion au Serveur
-Utilisez un client FTP pour vous connecter au serveur. Vous pouvez utiliser des clients FTP populaires tels que FileZilla, WinSCP, ou un client FTP en ligne de commande.
-```bash
-ftp localhost 2020
-```
-Suivez les invites du client FTP pour entrer le nom d'utilisateur et le mot de passe lorsqu'on vous le demande. Utilisez les noms d'utilisateur et les mots de passe prédéfinis suivants :
+Pour étendre le programme afin de prendre en charge des commandes FTP non implémentées, suivez ces étapes :
 
-- Nom d'utilisateur : user1
-- Mot de passe : pass1
+1. **Ajouter une Nouvelle Commande :** Identifiez la nouvelle commande FTP que vous souhaitez prendre en charge. Créez ensuite une méthode dans votre code pour gérer cette commande. Par exemple, si vous souhaitez ajouter la commande MYCMD, créez une méthode `handleMyCmdCommand` qui traitera cette commande.
 
-### Commandes FTP
+2. **Intégrer la Nouvelle Commande dans le Switch :** Ajoutez une nouvelle branche dans la structure switch qui vérifie la commande reçue et appelle la méthode appropriée pour la traiter. Par exemple :
 
-- **USER <nom-d'utilisateur> :** Entrez le nom d'utilisateur spécifié.
-- **PASS <mot-de-passe> :** Entrez le mot de passe spécifié.
-- **PASV :** Activez le mode passif et obtenez les détails de la connexion de données du serveur (Remarque : La commande PASV est recommandée par rapport à EPSV pour une compatibilité plus large et est le mode par défaut).
-- **RETR <nom-de-fichier> :** Récupérez le fichier spécifié à partir du serveur (Remarque : La commande RETR ne fonctionne actuellement pas correctement).
-- **QUIT :** Déconnectez-vous du serveur FTP.
+    ```java
+    switch (command) {
+        // ... Autres commandes existantes
+        case "MYCMD":
+            handleMyCmdCommand(scanner, outputStream);
+            break;
+        default:
+            sendResponse(outputStream, "502 Command not implemented\r\n");
+    }
+    ```
 
-### Problèmes avec le Mode Passif
+3. **Implémenter la Logique de la Nouvelle Commande :** À l'intérieur de la méthode que vous avez créée, implémentez la logique spécifique à la nouvelle commande. Cela pourrait inclure la validation des arguments, l'exécution de l'action associée à la commande, et l'envoi de la réponse appropriée au client.
 
-Si vous rencontrez des problèmes avec les connexions en mode passif, en particulier si votre client FTP ne prend pas en charge EPSV, considérez ce qui suit :
+4. **Tester et Valider :** Testez soigneusement la nouvelle commande pour vous assurer qu'elle fonctionne comme prévu. Vérifiez également la gestion des erreurs et assurez-vous que le serveur continue de fonctionner correctement avec d'autres commandes existantes.
 
-- Assurez-vous que votre client FTP est configuré pour utiliser le mode passif (PASV) plutôt que EPSV.
-- Vérifiez les paramètres de votre pare-feu pour autoriser les connexions entrantes à la plage de ports dynamique utilisée pour le transfert de données en mode passif.
+6. **Documenter :** Ajoutez des commentaires détaillés dans le code pour expliquer la logique de la nouvelle commande, ses exigences et son fonctionnement.
 
 
-## Exemple d'utilisation
-* Ouvrez un nouveau bash ou prompt
-```bash
-ftp localhost 2020
+## Remarque
 
-user user1
-pass pass1
-pasv
-retr Car/tp1/FTPServer.java
-quit
-```
+* Le serveur s'exécute par défaut sur le port 2121. Assurez-vous que ce port est disponible et n'est pas bloqué par un pare-feu.
+
+### Credit :
+* CHEYMA ZEKHNINI
