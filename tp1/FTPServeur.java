@@ -22,6 +22,7 @@ public class FTPServeur {
         // Ajoutez les utilisateurs et mots de passe autorisés ici
         userCredentials.put("user1", "pass1");
         userCredentials.put("user2", "pass2");
+        userCredentials.put("miage", "car");
     }
 
     /**
