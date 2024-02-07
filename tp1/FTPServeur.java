@@ -13,7 +13,8 @@ public class FTPServeur {
 
     private static ServerSocket serverSocket, dataServer;
     private static Socket clientSocket, dataClientSocket;
-    private static String currentDirectory = "/home/passwd/devoir/Car";
+    private static String currentDirectory ="/home/nadia/cheyma/tp1";
+    //private static String currentDirectory = "/home/passwd/devoir/Car";
 
     // Détient les informations d'identification des utilisateurs autorisés.
     private static final Map<String, String> userCredentials = new HashMap<>();
@@ -84,11 +85,15 @@ public class FTPServeur {
                     handleListCommand(outputStream);
                 } else if (cm.startsWith("CWD")) {
                     handleCwdCommand(commandArray, outputStream);
-                } else if (cm.toUpperCase().equals("QUIT")) {
+                } else if (cm.equals("PING")) {
+                    handlePingCommand(outputStream);
+                } 
+                else if (cm.toUpperCase().equals("QUIT")) {
                     outputStream.write("221 User logged out\r\n".getBytes());
                     if (clientSocket != null)
                         clientSocket.close();
-                } else {
+                } 
+                else {
                     sendResponse(outputStream, "502 Command not implemented\r\n");
                 }
             }
@@ -112,10 +117,12 @@ public class FTPServeur {
             throws IOException {
         String username = commandTb[1];
         if (userCredentials.containsKey(username)) {
+            //System.err.println("USER "+username);
             out.write("331 User name okay, need password\r\n".getBytes());
             String passCommand = scanner.nextLine();
             String[] passParts = passCommand.split(" ");
             if (passParts[0].equalsIgnoreCase("PASS") && userCredentials.get(username).equals(passParts[1])) {
+                System.err.println("PASS "+passParts[1]);
                 out.write("230 User logged in\r\n".getBytes());
             } else {
                 out.write("530 Not logged in, incorrect password\r\n".getBytes());
@@ -280,6 +287,18 @@ public class FTPServeur {
      */
     private static void sendResponse(OutputStream outputStream, String response) throws IOException {
         outputStream.write(response.getBytes());
+    }
+    
+    /**
+     * Envoie une réponse au client.
+     * 
+     * @param outputStream La sortie de la socket.
+     * @throws IOException En cas d'erreur d'entrée/sortie.
+     */
+
+    private static void handlePingCommand(OutputStream outputStream) throws IOException {
+        sendResponse(outputStream, "200 PING command ok\r\n");
+        sendResponse(outputStream, "PONG\r\n");
     }
 
 }
